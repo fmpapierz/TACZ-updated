@@ -7,10 +7,10 @@ rendering to the extracted-render-state model.
 
 Everything below was read off the deobfuscated 26.3 jar with `javap`, not from memory.
 
-**Status:** the port builds and runs. `./gradlew build` is green and the Fabric, Quilt and NeoForge
-dev clients all reach the main menu with no mixin failures; the Fabric dedicated server reaches
-`Done`. See *Verification performed* at the end for exactly what was and was not exercised. Forge
-is the one gap, and only because Forge has published nothing for 26.3 — details below.
+**Status:** the port builds and runs on all four loaders. `./gradlew build` is green, every client
+and dedicated server starts with no mixin failures, and played in-world sessions on Fabric, Quilt
+and NeoForge were exception-free. See *Verification performed* at the end for exactly what was and
+was not exercised.
 
 ## Toolchain
 
@@ -22,11 +22,12 @@ is the one gap, and only because Forge has published nothing for 26.3 — detail
 | ForgeGradle | 7.0.40 | 7.0.40 | unchanged |
 | Java | 25 | 25 | 26.3's `javaVersion.majorVersion` is still 25 |
 
-## Loader / dependency availability (checked 2026-09-17, two days after 26.3 released)
+## Loader / dependency availability (checked 2026-09-17, Forge line updated 2026-09-20)
 
-- **Forge has published nothing for 26.3.** Newest build is `26.2-65.1.3`; the Forge maven's
-  `lastUpdated` is 2026-08-27, before 26.3 shipped on 09-15. The `forge` module and its sources are
-  intact but excluded from the build — see `forge_enabled` in `gradle.properties`.
+- **Forge** released for 26.3 on 2026-09-19: `26.3-66.0.2` (`26.3-latest`). The module builds and runs
+  unchanged — the loader modules are pure platform glue, so nothing in it needed porting. The guessed
+  major version in `mods.toml` (`[66,)`) turned out to be correct. `forge_enabled` in
+  `gradle.properties` still exists to drop the module while waiting on a future version.
 - **NeoForge is beta-only**: `26.3.0.4-beta` is the newest.
 - **REI** and **Shoulder Surfing Reloaded** have no 26.3 build. Their integration code is untouched
   and still compiles against the 26.2 API jars (both are `compileOnly`, so nothing ships).
@@ -228,8 +229,8 @@ and no per-loader AT config. All six call sites only ever clear the field, so a 
 ## Verification performed
 
 `./gradlew build` and `./gradlew check` both pass, the latter including `common:checkLoaderNeutral`
-(no loader API leaked into `common`). Build output: `tacz-fabric`, `tacz-quilt` and
-`tacz-neoforge` 1.1.8+mc26.3 jars, plus their `-slim` and `-sources` variants.
+(no loader API leaked into `common`). Build output: `tacz-fabric`, `tacz-quilt`,
+`tacz-neoforge` and `tacz-forge` 1.1.8+mc26.3 jars, plus their `-slim` and `-sources` variants.
 
 Every runnable configuration was started and checked:
 
@@ -238,7 +239,7 @@ Every runnable configuration was started and checked:
 | Fabric | main menu, 0 mixin failures | `Done (1.609s)`, 0 mixin failures |
 | Quilt | main menu, 0 mixin failures | `Done (1.508s)`, 0 mixin failures |
 | NeoForge | main menu, 0 mixin failures, Cloth Config loads | `Done (2.547s)`, 0 mixin failures |
-| Forge | — no 26.3 build exists — | — |
+| Forge | main menu, 0 mixin failures | `Done (1.606s)`, 0 mixin failures |
 
 On every one of them TACZ initialises fully: synced entity data keys registered, the mesh loader
 registers its `mesh` gun model type, the default gun pack is exported and rescanned, and LRTactical

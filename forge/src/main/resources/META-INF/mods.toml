@@ -18,8 +18,6 @@ Modern and classic firearms with attachments, gun packs and a gun smith table. U
 [[dependencies.${mod_id}]]
 modId = "forge"
 mandatory = true
-# Placeholder: Forge has shipped nothing for 26.3. 26.2 was Forge 65, so 66 is the expected next
-# major. Check the real number when Forge releases and adjust with forge_version.
 versionRange = "[66,)"
 ordering = "NONE"
 side = "BOTH"

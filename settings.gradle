@@ -17,13 +17,12 @@ rootProject.name = 'tacz'
 
 include 'common', 'fabric', 'quilt', 'neoforge'
 
-// Forge has no Minecraft 26.3 build yet, so ForgeGradle has nothing to resolve and the module cannot
-// configure. Its sources stay in the tree, ready; set forge_enabled=true in gradle.properties (with a
-// real forge_version) to bring it back into the build.
+// forge_enabled=false drops the module entirely, for when Forge has not yet released for the
+// target Minecraft version and ForgeGradle would have nothing to resolve.
 if (settings.forge_enabled.toBoolean()) {
     include 'forge'
 } else {
     gradle.projectsLoaded {
-        logger.lifecycle('[TACZ] forge module skipped: Forge has no 26.3 build. Set forge_enabled=true in gradle.properties once it ships.')
+        logger.lifecycle('[TACZ] forge module skipped: forge_enabled=false in gradle.properties.')
     }
 }

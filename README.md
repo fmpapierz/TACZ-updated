@@ -11,10 +11,11 @@ report problems with it to them.
 > **About the 26.3 port.** 26.3 replaced GLFW with SDL, moved the GPU abstraction into a new
 > `com.mojang.renderpearl` library, swapped global render-output redirection for explicit render
 > passes, and converted first-person hand rendering to extracted render states. The port is across
-> all of that: the build is green and the Fabric, Quilt and NeoForge clients plus the dedicated
-> server all start cleanly with no mixin failures. In-world gameplay has not been played through
-> yet, so treat the scope picture-in-picture path (off by default) as the least proven area.
-> `docs/PORTING_NOTES_26.3.md` has the full API map and what was verified.
+> all of that: the build is green, all four loaders' clients and dedicated servers start cleanly with
+> no mixin failures, and in-world sessions on Fabric, Quilt and NeoForge — including firing and
+> reloading — ran without a single exception. The scope picture-in-picture path (off by default) is
+> the one area not yet confirmed on screen. `docs/PORTING_NOTES_26.3.md` has the full API map and
+> what was verified.
 
 ## Requirements
 
@@ -23,14 +24,13 @@ report problems with it to them.
 | Fabric   | Fabric Loader 0.19.5+ and Fabric API 0.160.7+26.3                                          |
 | Quilt    | Quilt Loader 0.31.0-beta.4+ and Fabric API 0.160.7+26.3 (QSL has no 26.x release)          |
 | NeoForge | NeoForge 26.3.0.4-beta+ (26.3 has only beta builds so far)                                 |
-| Forge    | *no 26.3 build exists yet* — see below                                                     |
+| Forge    | Forge 26.3-66.0.2+                                                                         |
 
 All loaders need Java 25. Use the jar that matches your loader; each one bundles its libraries (LuaJ,
 Commons Math, Mayday Animation Engine), relocated so they cannot clash with other mods.
 
-Forge has published nothing for Minecraft 26.3 (its newest build is `26.2-65.1.3`). The `forge` module
-and its sources are kept complete, but excluded from the build so the other loaders still build: set
-`forge_enabled=true` in `gradle.properties`, with the real version in `forge_version`, once Forge ships.
+`forge_enabled` in `gradle.properties` drops the `forge` module from the build when set to `false`,
+which is useful while waiting for Forge to release for a new Minecraft version.
 
 ## Building
 
@@ -38,9 +38,8 @@ and its sources are kept complete, but excluded from the build so the other load
 ./gradlew build
 ```
 
-The release jars end up in `build/libs/`: `tacz-fabric-<version>.jar`, `tacz-quilt-…`, `tacz-neoforge-…`,
-and `tacz-forge-…` when Forge is enabled. (The `-slim` jars inside each module's own `build/libs` lack
-the bundled libraries.)
+The release jars end up in `build/libs/`: `tacz-fabric-<version>.jar`, `tacz-quilt-…`, `tacz-neoforge-…`
+and `tacz-forge-…`. (The `-slim` jars inside each module's own `build/libs` lack the bundled libraries.)
 
 Development runs: `./gradlew :fabric:runClient` (or `:quilt:`, `:neoforge:`, `:forge:`), and `runServer` for a
 dedicated server in the module's `run-server` folder. The dev server reads console commands typed into the Gradle
@@ -129,11 +128,10 @@ or reach arbitrary Java classes.
 
 ## Known issues
 
-- In-world gameplay on 26.3 has not been played through yet. The scope picture-in-picture renderer
-  and the mesh GPU renderer were rebuilt onto 26.3's explicit-render-pass model (26.3 removed the
-  `RenderSystem` output-texture overrides they used to rely on), so those are the least proven
-  areas; scope PiP is off by default. See `docs/PORTING_NOTES_26.3.md`.
-- Forge is excluded from the build until Forge releases for 26.3 (`forge_enabled` in `gradle.properties`).
+- Scope picture-in-picture has not been confirmed on screen. It and the mesh GPU renderer were
+  rebuilt onto 26.3's explicit-render-pass model (26.3 removed the `RenderSystem` output-texture
+  overrides they relied on). In-world sessions covered the rest of the rendering without incident,
+  but none of them enabled PiP, which is off by default. See `docs/PORTING_NOTES_26.3.md`.
 - NeoForge and Forge grey out TACZ's Config button in the mod list when Cloth Config is not installed;
   on Forge use `/tacz config` or the config files.
 - The port ships no LRTactical display assets, so melee weapons look and swing like vanilla items unless a gun pack

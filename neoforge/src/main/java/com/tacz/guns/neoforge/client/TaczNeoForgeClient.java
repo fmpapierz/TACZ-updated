@@ -86,9 +86,9 @@ public final class TaczNeoForgeClient {
         modBus.addListener(FMLClientSetupEvent.class, event -> event.enqueueWork(ClientSetupEvent::registerBuiltinItemRenderers));
         modBus.addListener(FMLLoadCompleteEvent.class, event -> event.enqueueWork(() -> TaczClientEvents.onClientStarted(Minecraft.getInstance())));
 
-        if (ModList.get().isLoaded(CompatRegistry.CLOTH_CONFIG)) {
-            container.registerExtensionPoint(IConfigScreenFactory.class, new ClothConfigScreenFactory());
-        }
+        // Registered unconditionally: the factory falls back to TACZ's own screen when Cloth
+        // Config is absent, so the scope/PIP toggles are always reachable from the mod list.
+        container.registerExtensionPoint(IConfigScreenFactory.class, new ClothConfigScreenFactory());
 
         TaczClientEvents.registerListeners();
         IEventBus bus = NeoForge.EVENT_BUS;

@@ -4,6 +4,7 @@ import com.tacz.guns.client.gui.preview.GunPreviewRenderer;
 import com.tacz.guns.client.init.ClientSetupEvent;
 import com.tacz.guns.client.init.ModEntitiesRender;
 import com.tacz.guns.client.init.TaczClientEvents;
+import com.tacz.guns.client.gui.compat.FallbackConfigScreen;
 import com.tacz.guns.compat.cloth.MenuIntegration;
 import com.tacz.guns.init.CompatRegistry;
 import net.minecraft.client.Minecraft;
@@ -94,6 +95,10 @@ public final class TaczForgeClient {
 
         if (ModList.isLoaded(CompatRegistry.CLOTH_CONFIG)) {
             MinecraftForge.registerConfigScreen(parent -> MenuIntegration.getConfigBuilder().setParentScreen(parent).build());
+        } else {
+            // Cloth Config has no Forge 26.3 build, so without this the mod list's Config button
+            // would stay greyed out and the scope/PIP toggles would be unreachable in game.
+            MinecraftForge.registerConfigScreen(FallbackConfigScreen::new);
         }
 
         TaczClientEvents.registerListeners();

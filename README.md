@@ -136,9 +136,11 @@ or reach arbitrary Java classes.
   on Forge use `/tacz config` or the config files.
 - The port ships no LRTactical display assets, so melee weapons look and swing like vanilla items unless a gun pack
   provides their models and animations.
-- Carried over from 26.2, unverified on 26.3: on Forge the log shows
-  `[TACZ Scope] Hull-fill: could not read back the projection UBO` followed by a `Buffer is not readable`
-  stack trace. The scope renderer handles it by falling back to per-cube tracing.
+- `[TACZ Scope] Hull-fill: could not read back the projection UBO`, followed by a
+  `Buffer is not readable` stack trace. Harmless — the scope renderer falls back to per-cube tracing.
+  On 26.2 this only ever happened on Forge; on 26.3 it is **no longer loader-specific** (observed on
+  Quilt as well), which fits 26.3 moving the GPU layer to `renderpearl` and its Vulkan-capable
+  backend, where mapping the projection uniform buffer for read-back is not generally available.
 
 ## Credits and licenses
 

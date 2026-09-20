@@ -272,12 +272,19 @@ The evidence that the rewritten paths actually ran, rather than merely loading:
   that feeds `PolyMeshGpuRenderer`, whose draw call was moved onto the explicit-`RenderPass` model.
 - Gun sound and reload events, i.e. the animation state machine advancing.
 
-The only TACZ warning in any in-world session is
-`[TACZ Sound] Missing gun sound resource, skipped. sound=minecraft:<name>` — **pre-existing, not a
+`[TACZ Sound] Missing gun sound resource, skipped. sound=minecraft:<name>` is **pre-existing, not a
 port regression**: the 26.2 project's own logs carry the identical warnings for the same sounds
 (`bruenmk9_raise`, `rpg7_reload_lower`, …) across its fabric, forge and neoforge run dirs. The
 namespace on those paths is `minecraft:` rather than `tacz:`, which is a gun-pack content issue
 that predates this port.
+
+`[TACZ Scope] Hull-fill: could not read back the projection UBO` (with a `Buffer is not readable`
+trace, falling back to per-cube tracing) **changed scope in 26.3**. Counting across both trees'
+logs: on 26.2 it appears only on Forge and never on fabric, quilt or neoforge; on 26.3 it also
+appears on Quilt. So the 26.2 README's "on Forge" framing no longer holds. That fits the move to
+`renderpearl` — mapping the projection uniform buffer for CPU read-back is not something the new
+backend generally allows, rather than a quirk of one loader's GL setup. The fallback path is the
+same one 26.2 used, so the behaviour degrades identically; only the set of affected loaders grew.
 
 Two other in-world messages, both from outside the mod: Fabric API's dev-only untranslated-item-tag
 nag, and vanilla's `Requested post effect does not exist: minecraft:end_of_frame`.

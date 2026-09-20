@@ -289,13 +289,45 @@ same one 26.2 used, so the behaviour degrades identically; only the set of affec
 Two other in-world messages, both from outside the mod: Fabric API's dev-only untranslated-item-tag
 nag, and vanilla's `Requested post effect does not exist: minecraft:end_of_frame`.
 
+### Scope picture-in-picture, confirmed in world
+
+PiP is the most heavily rewritten area — its output path moved from the deleted `RenderSystem`
+overrides onto an explicitly opened `RenderPass` — and it has now run end to end, in world, with
+`ScopePipEnable` on, on **three loaders**: Forge, Fabric and NeoForge. Each of those sessions
+logged the whole chain and then kept rendering and shut down cleanly:
+
+```
+[TACZ Scope] Ocular mask drawn: 288 indices from 7 batches.
+[TACZ Scope] Scope PIP gate -> ACTIVE
+[TACZ Scope] Scope PIP target allocated at 641x360 (RGBA8_UNORM, depth=true).
+[TACZ Scope] Scope PIP second-render pass active: 641x360 at 25.0x (sodium terrain projection synced: false).
+```
+
+Two magnifications were exercised, 4.5x and 25.0x. The gate's own reasons show the surrounding
+states behaving too: it stood down for a gun with no magnifying optic, for a red-dot with no
+ocular mask, for a 1.25x scope under `ScopePipMinMagnification`, and for `ScopeMaskEnable` being
+switched off mid-session.
+
+What this rules out is specific. Every stage of the renderer catches its own exception, logs
+`Scope PIP … failed; PIP disabled` and self-deactivates — separately for scene capture, for the
+second-render pass and for the composite. None of those lines appears in any log, so the composite
+completed as well, not just the capture. The bugs the rewrite had to fix are likewise absent across
+all four loaders: no `Close the existing render pass before creating a new one!`, no `Render pass
+color attachment count must match pipeline color target state count`, and no SPIR-V compile or link
+errors from the six rewritten core shaders.
+
+One honest limit: this is the render path proving it executes without error at the right
+magnification, read off the logs. Nobody has photographed the lens, so how the image *looks* —
+framing, alignment, parallax — remains unverified.
+
+The same sessions incidentally confirmed the in-game config screen writes through: Fabric and
+NeoForge started with `ScopePipEnable = false` on disk and ended with `true`, toggled from the
+screen itself. Quilt was left off and, as expected, logged the ocular mask but no gate lines.
+
 ### Still not covered
 
-**Scope picture-in-picture has not been confirmed on screen.** It is off by default
-(`ScopePipEnable` / `ScopePipRerender` in the `[render]` section of `tacz-client.toml`) and is the
-most heavily rewritten area — its output path moved from the deleted `RenderSystem` overrides onto
-an explicitly opened `RenderPass`. The sessions above did not turn it on, so aiming down a
-magnifying scope with PiP enabled is the remaining thing to try.
+Quilt has not run with PiP enabled. The other three cover the code path and nothing in it is
+loader-specific, but that run is outstanding.
 
 Automating in-world entry is not currently possible, for the record: `--quickPlaySingleplayer` is a
 no-op on 26.3 dev launches (see the README note — the flag is on the JVM command line, but even a

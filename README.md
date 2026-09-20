@@ -11,11 +11,12 @@ report problems with it to them.
 > **About the 26.3 port.** 26.3 replaced GLFW with SDL, moved the GPU abstraction into a new
 > `com.mojang.renderpearl` library, swapped global render-output redirection for explicit render
 > passes, and converted first-person hand rendering to extracted render states. The port is across
-> all of that: the build is green, all four loaders' clients and dedicated servers start cleanly with
-> no mixin failures, and in-world sessions on Fabric, Quilt and NeoForge — including firing and
-> reloading — ran without a single exception. The scope picture-in-picture path (off by default) is
-> the one area not yet confirmed on screen. `docs/PORTING_NOTES_26.3.md` has the full API map and
-> what was verified.
+> all of that: the build is green, all four loaders' clients and dedicated servers start cleanly
+> with no mixin failures, and in-world sessions on all four — firing, reloading and aiming — ran
+> with no mod exception beyond the harmless Hull-fill read-back fallback noted under Known issues.
+> The scope picture-in-picture path, the most heavily rewritten area, has now been driven end to
+> end in world on Forge, Fabric and NeoForge. `docs/PORTING_NOTES_26.3.md` has the full API map
+> and what was verified.
 
 ## Requirements
 
@@ -128,10 +129,13 @@ or reach arbitrary Java classes.
 
 ## Known issues
 
-- Scope picture-in-picture has not been confirmed on screen. It and the mesh GPU renderer were
-  rebuilt onto 26.3's explicit-render-pass model (26.3 removed the `RenderSystem` output-texture
-  overrides they relied on). In-world sessions covered the rest of the rendering without incident,
-  but none of them enabled PiP, which is off by default. See `docs/PORTING_NOTES_26.3.md`.
+- Scope picture-in-picture runs, but nobody has checked how the image *looks*. It and the mesh GPU
+  renderer were rebuilt onto 26.3's explicit-render-pass model (26.3 removed the `RenderSystem`
+  output-texture overrides they relied on). With `ScopePipEnable` on, the whole chain — ocular
+  mask, render target, second render pass, composite — completed in world on Forge, Fabric and
+  NeoForge, at 4.5x and 25x, with no render-pass or shader errors and no self-deactivation. What
+  is unverified is the picture itself: framing, alignment and parallax through the lens. Quilt has
+  not been run with it on. See `docs/PORTING_NOTES_26.3.md`.
 - NeoForge and Forge grey out TACZ's Config button in the mod list when Cloth Config is not installed;
   on Forge use `/tacz config` or the config files.
 - The port ships no LRTactical display assets, so melee weapons look and swing like vanilla items unless a gun pack

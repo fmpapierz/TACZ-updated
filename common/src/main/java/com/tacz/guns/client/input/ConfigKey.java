@@ -1,0 +1,45 @@
+package com.tacz.guns.client.input;
+import com.tacz.guns.platform.Platform;
+
+import cn.sh1rocu.tacz.api.event.InputEvent;
+import com.mojang.blaze3d.platform.InputConstants;
+import com.tacz.guns.client.gui.compat.ClothConfigScreen;
+import com.tacz.guns.compat.cloth.MenuIntegration;
+import com.tacz.guns.init.CompatRegistry;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.MutableComponent;
+
+import java.net.URI;
+
+import static com.tacz.guns.util.InputExtraCheck.isInGame;
+
+public class ConfigKey {
+    public static final KeyMapping OPEN_CONFIG_KEY = new KeyMapping("key.tacz.open_config.desc",
+            InputConstants.Type.KEYBOARD,
+            InputConstants.KEY_T,
+            TaCZKeyCategory.TACZ);
+
+    public static void onOpenConfig(InputEvent.Key event) {
+        if (isInGame() && event.getAction() == InputConstants.PRESS
+                && OPEN_CONFIG_KEY.matches(InputConstants.Type.KEYBOARD.getOrCreate(event.getKey()))) {
+            LocalPlayer player = Minecraft.getInstance().player;
+            if (player == null || player.isSpectator()) {
+                return;
+            }
+            if (!Platform.INSTANCE.isModLoaded(CompatRegistry.CLOTH_CONFIG)) {
+                ClickEvent clickEvent = new ClickEvent.OpenUrl(URI.create(ClothConfigScreen.CLOTH_CONFIG_URL));
+                HoverEvent hoverEvent = new HoverEvent.ShowText(Component.translatable("gui.tacz.cloth_config_warning.download"));
+                MutableComponent component = Component.translatable("gui.tacz.cloth_config_warning.tips").withStyle(style ->
+                        style.withColor(0x5555FF).withUnderlined(true).withClickEvent(clickEvent).withHoverEvent(hoverEvent));
+                player.sendSystemMessage(component);
+            } else {
+                CompatRegistry.checkModLoad(CompatRegistry.CLOTH_CONFIG, () -> Minecraft.getInstance().gui.setScreen(MenuIntegration.getConfigScreen(null)));
+            }
+        }
+    }
+}

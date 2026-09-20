@@ -1,0 +1,29 @@
+pluginManagement {
+    repositories {
+        maven { name = 'Fabric'; url = 'https://maven.fabricmc.net/' }
+        maven { name = 'NeoForged'; url = 'https://maven.neoforged.net/releases' }
+        maven { name = 'MinecraftForge'; url = 'https://maven.minecraftforge.net/' }
+        maven { name = 'Quilt'; url = 'https://maven.quiltmc.org/repository/release' }
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+if (JavaVersion.current().ordinal() + 1 < 25) {
+    throw new IllegalStateException('Minecraft 26.3 requires Gradle to run on Java 25 or newer (set org.gradle.java.home or JAVA_HOME).')
+}
+
+rootProject.name = 'tacz'
+
+include 'common', 'fabric', 'quilt', 'neoforge'
+
+// Forge has no Minecraft 26.3 build yet, so ForgeGradle has nothing to resolve and the module cannot
+// configure. Its sources stay in the tree, ready; set forge_enabled=true in gradle.properties (with a
+// real forge_version) to bring it back into the build.
+if (settings.forge_enabled.toBoolean()) {
+    include 'forge'
+} else {
+    gradle.projectsLoaded {
+        logger.lifecycle('[TACZ] forge module skipped: Forge has no 26.3 build. Set forge_enabled=true in gradle.properties once it ships.')
+    }
+}

@@ -140,36 +140,21 @@ public abstract class FeatureRenderDispatcherMixin {
         ScopePipRenderer.setCurrentPreparingStorage(null);
     }
 
-    @Inject(
-            method = "renderAllFeatures",
-            at = @At(
-                    value = "INVOKE",
-                    target = "Lnet/minecraft/client/renderer/feature/FeatureRenderDispatcher$PreparedFrame;executeSolid(Lcom/mojang/renderpearl/api/commands/RenderPass;)V",
-                    shift = At.Shift.BEFORE
-            )
-    )
-    private static void tacz$scopeMaskAtPhaseBoundary(RenderPass pass,
-                                                       FeatureRenderDispatcher.PreparedFrame prepared,
-                                                       CallbackInfo ci) {
-        // 【Step 2】画真正的目镜掩码。
-        //
-        // 上一轮的空 pass 探针已证明这个时机安全（实测预览块变绿），
-        // 结论固化后探针即删除，不留死代码。
-        ScopeMaskRenderer.renderAtPhaseBoundary();
-        // 【镜内画中画】紧跟掩码之后合成。三者的先后关系是硬约束：
-        //
-        //   掩码           -> 知道镜内是哪些像素
-        //   合成（这一句）  -> 那些像素被贴上离屏渲染的放大世界
-        //   executeSolid…  -> 镜身在镜内 discard（PIP 画面得以留住）；
-        //                     准星反向裁剪只画镜内（浮在 PIP 画面之上）
-        //
-        // 往前挪掩码还没就绪，往后挪（比如手持渲染之后）准星会被 PIP 盖掉。
-        ScopePipRenderer.compositeAtPhaseBoundary();
-        // 【光影后置目镜框 · 坑 B】手持投影/模型视图必须在这里（阶段边界，
-        // 与掩码同点）抓 —— submit 阶段 RenderSystem 里挂的还是世界那套矩阵，
-        // 拿去画目镜框会整个飘出画面。内部自判手部 pass + 队列非空，无光影零开销。
-        com.tacz.guns.client.render.scope.ScopeFinalOverlayState.capturePhaseBoundaryTransform();
-    }
+    /**
+     * 26.3 迁移：这三件事搬到了 {@code GameRendererMixin#tacz$scopeMaskBeforeHandPass}。
+     *
+     * <p>26.2 时各 executeXxx 自己开关 pass，阶段边界不在任何 pass 内，掩码可以在这里
+     * 开自己的 pass。26.3 的 renderAllFeatures 收的是<b>调用方开好的那一个</b> pass，
+     * 各阶段共用它 —— 于是 executeSolid 的调用点<b>永远在 pass 内</b>，
+     * {@code createRenderPass} 的 isInRenderPass 断言必然触发
+     * （实测：IllegalStateException "Close the existing render pass before creating a new one!"，
+     * 掩码随即自我禁用，PIP 跟着失效）。
+     *
+     * <p>掩码画的是它自己的离屏 target，不能改用共用 pass，所以整段挪到
+     * {@code GameRenderer#renderItemInHand} 里 createRenderPass 之前的那个窗口：
+     * 此刻 submitHandsWithItems 已收集完目镜几何、prepareFrame 已跑完、还没有任何 pass 打开，
+     * 而且仍然早于 executeSolid —— 原有的「掩码 → 合成 → 镜身裁剪」先后关系逐条保持。
+     */
 
     /**
      * <b>第一人称</b> poly_mesh GPU 绘制：必须在 executeSolid <b>之后</b>。
@@ -202,6 +187,6 @@ public abstract class FeatureRenderDispatcherMixin {
     private static void tacz$polyMeshGpuAfterSolid(RenderPass pass,
                                                   FeatureRenderDispatcher.PreparedFrame prepared,
                                                   CallbackInfo ci) {
-        PolyMeshGpuRenderer.renderAfterSolid();
+        PolyMeshGpuRenderer.renderAfterSolid(pass);
     }
 }

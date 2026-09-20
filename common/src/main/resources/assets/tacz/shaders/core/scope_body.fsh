@@ -1,4 +1,5 @@
 #version 330
+#extension GL_ARB_separate_shader_objects : require
 
 // 瞄具镜身片元着色器 —— 在 vanilla core/entity.fsh 之上只加一件事：
 // 被目镜盖到的像素 discard。
@@ -13,9 +14,9 @@
 // 本文件与 26.2 的 assets/minecraft/shaders/core/entity.fsh 逐行一致 ——
 // 如果将来 vanilla 改了 entity.fsh，这里要跟着同步。
 
-#moj_import <minecraft:fog.glsl>
-#moj_import <minecraft:dynamictransforms.glsl>
-#moj_import <minecraft:globals.glsl>
+#include <minecraft:fog.glsl>
+#include <minecraft:dynamictransforms.glsl>
+#include <minecraft:globals.glsl>
 
 uniform sampler2D Sampler0;
 
@@ -29,26 +30,26 @@ uniform sampler2D DissolveMaskSampler;
 uniform sampler2D ScopeMaskSampler;
 #endif
 
-in float sphericalVertexDistance;
-in float cylindricalVertexDistance;
+layout(location = 0) in float sphericalVertexDistance;
+layout(location = 1) in float cylindricalVertexDistance;
 #ifdef PER_FACE_LIGHTING
-in vec4 vertexPerFaceColorBack;
-in vec4 vertexPerFaceColorFront;
+layout(location = 2) in vec4 vertexPerFaceColorBack;
+layout(location = 3) in vec4 vertexPerFaceColorFront;
 #else
-in vec4 vertexColor;
+layout(location = 2) in vec4 vertexColor;
 #endif
 
 #ifndef EMISSIVE
-in vec4 lightMapColor;
+layout(location = 4) in vec4 lightMapColor;
 #endif
 
 #ifndef NO_OVERLAY
-in vec4 overlayColor;
+layout(location = 5) in vec4 overlayColor;
 #endif
 
-in vec2 texCoord0;
+layout(location = 6) in vec2 texCoord0;
 
-out vec4 fragColor;
+layout(location = 0) out vec4 fragColor;
 
 void main() {
 #ifdef SCOPE_MASK

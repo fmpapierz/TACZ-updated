@@ -1,5 +1,7 @@
 package com.tacz.guns.client.render.scope;
 
+import com.mojang.renderpearl.api.pipeline.BlendFunction;
+import com.mojang.renderpearl.api.pipeline.ColorTargetState;
 import com.mojang.renderpearl.api.pipeline.BindGroupLayout;
 import com.mojang.renderpearl.api.pipeline.UniformType;
 import com.mojang.renderpearl.api.pipeline.RenderPipeline;
@@ -85,6 +87,9 @@ public final class ScopeTextRenderTypes {
     private static final RenderPipeline CLIPPED_TEXT_PIPELINE =
             RenderPipeline.builder(RenderPipelines.WORLD_TEXT_SNIPPET)
                     .withLocation(Identifier.fromNamespaceAndPath(GunMod.MOD_ID, "pipeline/scope_text_clipped"))
+                    // 26.3: the colour target count must match the pass; vanilla pipeline/text
+                    // declares one with a TRANSLUCENT blend, and this mirrors it.
+                    .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
                     .withVertexShader(Identifier.fromNamespaceAndPath(GunMod.MOD_ID, "core/scope_text"))
                     .withFragmentShader(Identifier.fromNamespaceAndPath(GunMod.MOD_ID, "core/scope_text"))
                     .withShaderDefine("SCOPE_MASK")

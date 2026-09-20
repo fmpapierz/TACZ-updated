@@ -1,5 +1,6 @@
 package com.tacz.guns.mixin.client;
 
+import com.mojang.renderpearl.api.commands.RenderPass;
 import cn.sh1rocu.tacz.compat.meshloader.render.PolyMeshGpuRenderer;
 import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
 import org.spongepowered.asm.mixin.Mixin;
@@ -61,7 +62,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class PreparedFrameSolidMixin {
 
     @Inject(method = "executeSolid", at = @At("RETURN"))
-    private void tacz$worldPolyMeshAfterSolid(CallbackInfo ci) {
-        PolyMeshGpuRenderer.renderWorldAfterSolid();
+    private void tacz$worldPolyMeshAfterSolid(RenderPass pass, CallbackInfo ci) {
+        // 26.3: executeSolid 收 RenderPass，而且整个 renderAllFeatures 共用它 ——
+        // 世界 mesh 不能再自己开 pass（撞 isInRenderPass 断言），改为借用这一个。
+        PolyMeshGpuRenderer.renderWorldAfterSolid(pass);
     }
 }

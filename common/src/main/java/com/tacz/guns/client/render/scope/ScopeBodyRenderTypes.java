@@ -85,6 +85,11 @@ public final class ScopeBodyRenderTypes {
     private static RenderPipeline buildPipeline(String name, boolean mask, boolean invert, boolean emissive) {
         var builder = RenderPipeline.builder(RenderPipelines.ENTITY_SNIPPET)
                 .withLocation(Identifier.fromNamespaceAndPath(GunMod.MOD_ID, "pipeline/" + name))
+                // 26.3: a pipeline must declare exactly as many colour targets as the pass has
+                // attachments, or setPipeline throws "Render pass color attachment count must match
+                // pipeline color target state count". ENTITY_SNIPPET declares none, so add one —
+                // vanilla entity_cutout does the same with ColorTargetState.DEFAULT.
+                .withColorTargetState(ColorTargetState.DEFAULT)
                 .withVertexShader(Identifier.fromNamespaceAndPath(GunMod.MOD_ID, "core/scope_body"))
                 .withFragmentShader(Identifier.fromNamespaceAndPath(GunMod.MOD_ID, "core/scope_body"))
                 .withShaderDefine("ALPHA_CUTOUT", 0.1F)
@@ -236,6 +241,8 @@ public final class ScopeBodyRenderTypes {
     private static final RenderPipeline FINAL_OCULAR_RING_PIPELINE =
             RenderPipeline.builder(RenderPipelines.ENTITY_SNIPPET)
                     .withLocation(Identifier.fromNamespaceAndPath(GunMod.MOD_ID, "pipeline/scope_final_ocular_ring"))
+                    // 26.3: see buildPipeline — the colour target count must match the pass.
+                    .withColorTargetState(ColorTargetState.DEFAULT)
                     .withVertexShader(Identifier.fromNamespaceAndPath(GunMod.MOD_ID, "core/scope_body"))
                     .withFragmentShader(Identifier.fromNamespaceAndPath(GunMod.MOD_ID, "core/scope_ring_final"))
                     .withShaderDefine("ALPHA_CUTOUT", 0.1F)

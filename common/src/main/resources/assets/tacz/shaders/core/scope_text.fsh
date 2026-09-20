@@ -1,4 +1,5 @@
 #version 330
+#extension GL_ARB_separate_shader_objects : require
 
 // 【镜内文字】片元着色器。
 //
@@ -13,13 +14,13 @@
 // 如果将来 vanilla 改了 text.fsh，这里要跟着同步（同 scope_body 的约定）。
 
 #if !defined(IS_GUI) && !defined(IS_SEE_THROUGH)
-#moj_import <minecraft:fog.glsl>
+#include <minecraft:fog.glsl>
 #endif
 
-#moj_import <minecraft:dynamictransforms.glsl>
+#include <minecraft:dynamictransforms.glsl>
 #ifdef SCOPE_MASK
 // globals.glsl 提供 ScreenSize（scope_body.fsh 同款用法）。
-#moj_import <minecraft:globals.glsl>
+#include <minecraft:globals.glsl>
 #endif
 
 uniform sampler2D Sampler0;
@@ -31,14 +32,14 @@ uniform sampler2D ScopeMaskSampler;
 #endif
 
 #if !defined(IS_GUI) && !defined(IS_SEE_THROUGH)
-in float sphericalVertexDistance;
-in float cylindricalVertexDistance;
+layout(location = 0) in float sphericalVertexDistance;
+layout(location = 1) in float cylindricalVertexDistance;
 #endif
 
-in vec4 vertexColor;
-in vec2 texCoord0;
+layout(location = 2) in vec4 vertexColor;
+layout(location = 3) in vec2 texCoord0;
 
-out vec4 fragColor;
+layout(location = 0) out vec4 fragColor;
 
 void main() {
 #ifdef SCOPE_MASK

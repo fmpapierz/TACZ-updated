@@ -541,7 +541,7 @@ public final class PolyMeshGpuRenderer {
      * 在手部 {@code renderAllFeatures} 的 {@code executeSolid} <b>之后</b>绘制。
      * 世界那次直接清空残留（理论上不应有）。
      */
-    public static void renderAfterSolid() {
+    public static void renderAfterSolid(RenderPass sharedPass) {
         // 【PIP 二次渲染 × 光影 —— 必须最先挡】Iris 把手部渲染搬进
         // LevelRenderer.render 内部，于是镜内那一遍也有自己的手部 pass，
         // 本方法会先于主画面那一遍被调到。不挡的话：
@@ -588,9 +588,9 @@ public final class PolyMeshGpuRenderer {
         }
         try {
             if (useRenderTypeRoute()) {
-                drawListViaRenderType(HAND_DRAWS);
+                drawListViaRenderType(HAND_DRAWS, sharedPass);
             } else {
-                drawList(HAND_DRAWS);
+                drawList(HAND_DRAWS, sharedPass);
             }
             drawnThisFrame = true;
         } catch (Exception | LinkageError e) {
@@ -673,7 +673,7 @@ public final class PolyMeshGpuRenderer {
      * RETURN 处不在任何 pass 内，createRenderPass 断言安全；
      * 立方体/地形深度已就绪，GPU poly 同一张 depth view 深度测试即正确遮挡。</p>
      */
-    public static void renderWorldAfterSolid() {
+    public static void renderWorldAfterSolid(RenderPass sharedPass) {
         if (!insideLevelRender) {
             return;
         }
@@ -698,9 +698,9 @@ public final class PolyMeshGpuRenderer {
         }
         try {
             if (useRenderTypeRoute()) {
-                drawWorldListViaRenderType(WORLD_DRAWS);
+                drawWorldListViaRenderType(WORLD_DRAWS, sharedPass);
             } else {
-                drawList(WORLD_DRAWS);
+                drawList(WORLD_DRAWS, sharedPass);
             }
             if (!inScopePass) {
                 worldDrawnThisFrame = true;
@@ -753,12 +753,12 @@ public final class PolyMeshGpuRenderer {
      * 同一 RenderType —— 无光影时两条路视觉逐位一致；顶点里 UV1=NO_OVERLAY、
      * UV2=量化光照，语义同 collector 写入。
      */
-    private static void drawListViaRenderType(List<DrawEntry> draws) {
+    private static void drawListViaRenderType(List<DrawEntry> draws, RenderPass sharedPass) {
         // 不再调 IrisCompat.assignCommonEntityPipelinesToHandIfNeeded()：ENTITY_CUTOUT 在
         // Iris 26.2 静态表里本就按「绘制时刻是否在手部 pass」分派到 gbuffers_hand，
         // 那次 assign 对已注册管线是 no-op（抛 already assigned 被吞），见下方
         // drawWorldListViaRenderType 的 javadoc 与 IrisCompat 的说明。
-        long totalIndices = drawViaRenderTypeCore(draws, true);
+        long totalIndices = drawViaRenderTypeCore(draws, true, sharedPass);
         if (!loggedFirstIrisDraw) {
             loggedFirstIrisDraw = true;
             LOGGER.info("[TacZMeshLoader] GPU mesh pass (RenderType route, shader-pack compatible) drew {} bones "
@@ -785,8 +785,8 @@ public final class PolyMeshGpuRenderer {
      * 默认接管（gbuffers_entities 链路）正是我们想要的。绘制机制（prepare() 压栈取
      * MV × drawFromBuffer）与手部变体完全同构，两层变换定理不区分 pass。</p>
      */
-    private static void drawWorldListViaRenderType(List<DrawEntry> draws) {
-        long totalIndices = drawViaRenderTypeCore(draws, false);
+    private static void drawWorldListViaRenderType(List<DrawEntry> draws, RenderPass sharedPass) {
+        long totalIndices = drawViaRenderTypeCore(draws, false, sharedPass);
         if (!loggedFirstWorldDraw) {
             loggedFirstWorldDraw = true;
             LOGGER.info("[TacZMeshLoader] GPU world mesh pass (RenderType route) drew {} bones "
@@ -798,7 +798,7 @@ public final class PolyMeshGpuRenderer {
      * @param handPass 手部表才裁目镜（{@code clipForViewmodel}）；世界表不裁 ——
      *                 世界枪本就该出现在镜内画面里，与 collector 的世界枪一致。
      */
-    private static long drawViaRenderTypeCore(List<DrawEntry> draws, boolean handPass) {
+    private static long drawViaRenderTypeCore(List<DrawEntry> draws, boolean handPass, RenderPass sharedPass) {
         Minecraft mc = Minecraft.getInstance();
         RenderTarget mainTarget = mc.gameRenderer.mainRenderTarget();
         if (mainTarget == null) {
@@ -834,20 +834,10 @@ public final class PolyMeshGpuRenderer {
         // 这里要的就是主 target 的颜色 + 深度附件，与 drawList 那一路一致；
         // 两个 Optional 留空 = 不清屏、不清深度（executeSolid 画好的立方体深度要留着）。
         //
-        // 整批共用一个 pass：本方法的调用点（executeSolid RETURN / 手部
-        // renderAllFeatures 收尾）都在任何 pass 之外，createRenderPass 的
-        // isInRenderPass 断言安全。
-        CommandEncoder encoder = RenderSystem.getDevice().createCommandEncoder();
-        long totalIndices = 0;
-        try (RenderPass pass = encoder.createRenderPass(
-                () -> handPass ? "tacz_mesh_rendertype_hand" : "tacz_mesh_rendertype_world",
-                colorView,
-                Optional.empty(),
-                depthView,
-                OptionalDouble.empty())) {
-            totalIndices = drawGroupsInPass(byTexture, handPass, mvStack, pass);
-        }
-        return totalIndices;
+        // 【26.3】借用调用方那个共用 pass，理由同 drawList：26.3 起 executeSolid 前后
+        // 都在 pass 内，自己再开一个会撞 isInRenderPass 断言，而共用 pass 的附件
+        // （主 target 颜色 + 深度、不清屏不清深度）正是这里要的。
+        return drawGroupsInPass(byTexture, handPass, mvStack, sharedPass);
     }
 
     /**
@@ -924,7 +914,7 @@ public final class PolyMeshGpuRenderer {
         return totalIndices;
     }
 
-    private static void drawList(List<DrawEntry> draws) {
+    private static void drawList(List<DrawEntry> draws, RenderPass sharedPass) {
         Minecraft mc = Minecraft.getInstance();
         RenderTarget mainTarget = mc.gameRenderer.mainRenderTarget();
         if (mainTarget == null) {
@@ -1003,15 +993,14 @@ public final class PolyMeshGpuRenderer {
             logOcularClipActiveOnce("custom pass");
         }
 
-        // 阶段边界不在任何 render pass 内（FeatureRenderDispatcherMixin 的字节码分析），
-        // createRenderPass 的 isInRenderPass 断言安全。颜色 Optional.empty() = 不清屏，
-        // 深度 OptionalDouble.empty() = 不清深度 —— executeSolid 画好的立方体深度要留着。
-        try (RenderPass pass = encoder.createRenderPass(
-                () -> "tacz_mesh_gpu",
-                colorView,
-                Optional.empty(),
-                depthView,
-                OptionalDouble.empty())) {
+        // 【26.3】不再自己开 pass。26.2 时各 executeXxx 自管 pass，阶段边界不在任何 pass 内；
+        // 26.3 的 renderAllFeatures 收的是调用方开好的那一个、各阶段共用，于是 executeSolid
+        // 前后都在 pass 内，再开一个就撞 isInRenderPass 断言。
+        // 幸好这里要画的目标（主 target 的颜色 + 深度）正是那个共用 pass 的附件，
+        // 而且它同样是「不清屏、不清深度」，所以直接借用即可 —— executeSolid 画好的
+        // 立方体深度照样留着，深度测试结果与 26.2 一致。
+        {
+            RenderPass pass = sharedPass;
             boolean lit = lightmapView != null;
             pass.setPipeline(RenderSystem.getCompiledPipeline(clipAgainstOcular ? LIT_CLIPPED_PIPELINE : (lit ? LIT_PIPELINE : EMISSIVE_PIPELINE)));
             RenderSystem.bindDefaultUniforms(pass);

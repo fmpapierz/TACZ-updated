@@ -8,6 +8,7 @@ import com.mojang.blaze3d.resource.CrossFrameResourcePool;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.tacz.guns.api.client.event.RenderItemInHandBobEvent;
 import com.tacz.guns.api.client.event.RenderLevelBobEvent;
+import com.tacz.guns.client.render.scope.ScopeFinalOverlayState;
 import com.tacz.guns.client.render.scope.ScopeMaskRenderer;
 import com.tacz.guns.client.render.scope.ScopePipResourceProbe;
 import com.tacz.guns.client.render.scope.ScopePipRenderer;
@@ -48,6 +49,56 @@ public abstract class GameRendererMixin {
 
     @Unique
     private boolean tacz$renderingItemInHand;
+
+    /**
+     * 目镜掩码 + 镜内画中画合成 + 光影后置目镜框的矩阵抓取。
+     *
+     * <h2>26.3 为什么挪到这里</h2>
+     * 26.2 时这三件事挂在 {@code renderAllFeatures} 里 {@code executeSolid} 之前的
+     * 「阶段边界」—— 那时各 {@code executeXxx} 自己开关 pass，边界上不在任何 pass 内，
+     * 掩码可以安全地 {@code createRenderPass}。
+     *
+     * <p>26.3 把 {@code renderAllFeatures} 改成收<b>调用方开好的那一个</b> pass，各阶段共用它。
+     * 于是 {@code executeSolid} 的调用点<b>永远在 pass 内</b>，掩码再开一个就必然撞上
+     * {@code isInRenderPass} 断言 —— 实测
+     * {@code IllegalStateException: Close the existing render pass before creating a new one!}，
+     * 掩码捕获后自我禁用，PIP 因为拿不到孔径跟着失效。
+     *
+     * <p>掩码画的是自己的离屏 target，没法改用那个共用 pass，所以搬到
+     * {@code renderItemInHand} 里 {@code createRenderPass} <b>之前</b>的窗口。那一刻
+     * （字节码实读的顺序）：{@code submitHandsWithItems} 已经把目镜几何收集完、
+     * {@code prepareFrame} 已跑完、还没有任何 pass 打开，而 MV 栈顶仍是手持矩阵。
+     * 相对 {@code executeSolid} 依然更早，所以
+     * 「掩码 → 合成 → 镜身在镜内 discard」这条硬先后关系逐条保持。
+     */
+    @Inject(
+            method = "renderItemInHand",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lcom/mojang/renderpearl/api/commands/CommandEncoder;createRenderPass(Ljava/util/function/Supplier;Lcom/mojang/renderpearl/api/textures/GpuTextureView;Ljava/util/Optional;Lcom/mojang/renderpearl/api/textures/GpuTextureView;Ljava/util/OptionalDouble;)Lcom/mojang/renderpearl/api/commands/RenderPass;",
+                    shift = At.Shift.BEFORE
+            )
+    )
+    private void tacz$scopeMaskBeforeHandPass(CameraRenderState cameraState,
+                                              PlayerRenderState playerRenderState,
+                                              GpuTextureView outputTexture,
+                                              CallbackInfo ci) {
+        // 【Step 2】画真正的目镜掩码。
+        ScopeMaskRenderer.renderAtPhaseBoundary();
+        // 【镜内画中画】紧跟掩码之后合成。三者的先后关系是硬约束：
+        //
+        //   掩码           -> 知道镜内是哪些像素
+        //   合成（这一句）  -> 那些像素被贴上离屏渲染的放大世界
+        //   executeSolid…  -> 镜身在镜内 discard（PIP 画面得以留住）；
+        //                     准星反向裁剪只画镜内（浮在 PIP 画面之上）
+        //
+        // 往前挪掩码还没就绪，往后挪（比如手持渲染之后）准星会被 PIP 盖掉。
+        ScopePipRenderer.compositeAtPhaseBoundary();
+        // 【光影后置目镜框 · 坑 B】手持投影/模型视图必须在这里抓 —— submit 阶段
+        // RenderSystem 里挂的还是世界那套矩阵，拿去画目镜框会整个飘出画面。
+        // 内部自判手部 pass + 队列非空，无光影零开销。
+        ScopeFinalOverlayState.capturePhaseBoundaryTransform();
+    }
 
     @Inject(method = "renderItemInHand", at = @At("HEAD"))
     private void tacz$beginHandPass(CameraRenderState cameraState,

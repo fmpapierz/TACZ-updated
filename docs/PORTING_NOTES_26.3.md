@@ -293,7 +293,7 @@ nag, and vanilla's `Requested post effect does not exist: minecraft:end_of_frame
 
 PiP is the most heavily rewritten area — its output path moved from the deleted `RenderSystem`
 overrides onto an explicitly opened `RenderPass` — and it has now run end to end, in world, with
-`ScopePipEnable` on, on **three loaders**: Forge, Fabric and NeoForge. Each of those sessions
+`ScopePipEnable` on, on **all four loaders**: Forge, Fabric, NeoForge and Quilt. Each session
 logged the whole chain and then kept rendering and shut down cleanly:
 
 ```
@@ -307,6 +307,10 @@ Two magnifications were exercised, 4.5x and 25.0x. The gate's own reasons show t
 states behaving too: it stood down for a gun with no magnifying optic, for a red-dot with no
 ocular mask, for a 1.25x scope under `ScopePipMinMagnification`, and for `ScopeMaskEnable` being
 switched off mid-session.
+
+Quilt was the last one in: it was still at `ScopePipEnable = false` after the other three had
+reached ACTIVE, so it was enabled and rerun on its own, and it reached ACTIVE at 25.0x like the
+rest. Nothing in the PiP path is loader-specific, which is what the four matching runs show.
 
 What this rules out is specific. Every stage of the renderer catches its own exception, logs
 `Scope PIP … failed; PIP disabled` and self-deactivates — separately for scene capture, for the
@@ -322,12 +326,13 @@ framing, alignment, parallax — remains unverified.
 
 The same sessions incidentally confirmed the in-game config screen writes through: Fabric and
 NeoForge started with `ScopePipEnable = false` on disk and ended with `true`, toggled from the
-screen itself. Quilt was left off and, as expected, logged the ocular mask but no gate lines.
+screen itself.
 
 ### Still not covered
 
-Quilt has not run with PiP enabled. The other three cover the code path and nothing in it is
-loader-specific, but that run is outstanding.
+One gap is left, and it is a visual one: no screenshot has been taken through a scope lens, so
+the PiP image could execute perfectly and still be framed or aligned wrong. Everything else in
+the port has been exercised.
 
 Automating in-world entry is not currently possible, for the record: `--quickPlaySingleplayer` is a
 no-op on 26.3 dev launches (see the README note — the flag is on the JVM command line, but even a

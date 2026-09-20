@@ -15,8 +15,8 @@ report problems with it to them.
 > with no mixin failures, and in-world sessions on all four — firing, reloading and aiming — ran
 > with no mod exception beyond the harmless Hull-fill read-back fallback noted under Known issues.
 > The scope picture-in-picture path, the most heavily rewritten area, has now been driven end to
-> end in world on Forge, Fabric and NeoForge. `docs/PORTING_NOTES_26.3.md` has the full API map
-> and what was verified.
+> end in world on all four. `docs/PORTING_NOTES_26.3.md` has the full API map and what was
+> verified.
 
 ## Requirements
 
@@ -132,10 +132,10 @@ or reach arbitrary Java classes.
 - Scope picture-in-picture runs, but nobody has checked how the image *looks*. It and the mesh GPU
   renderer were rebuilt onto 26.3's explicit-render-pass model (26.3 removed the `RenderSystem`
   output-texture overrides they relied on). With `ScopePipEnable` on, the whole chain — ocular
-  mask, render target, second render pass, composite — completed in world on Forge, Fabric and
-  NeoForge, at 4.5x and 25x, with no render-pass or shader errors and no self-deactivation. What
-  is unverified is the picture itself: framing, alignment and parallax through the lens. Quilt has
-  not been run with it on. See `docs/PORTING_NOTES_26.3.md`.
+  mask, render target, second render pass, composite — completed in world on all four loaders, at
+  4.5x and 25x, with no render-pass or shader errors and no self-deactivation. What is unverified
+  is the picture itself: framing, alignment and parallax through the lens.
+  See `docs/PORTING_NOTES_26.3.md`.
 - NeoForge and Forge grey out TACZ's Config button in the mod list when Cloth Config is not installed;
   on Forge use `/tacz config` or the config files.
 - The port ships no LRTactical display assets, so melee weapons look and swing like vanilla items unless a gun pack
